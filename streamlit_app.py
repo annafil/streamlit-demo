@@ -11,7 +11,7 @@ from datetime import datetime
 
 st.title('Anna\'s first streamlit app')
 
-st.header('What this looks like as a static 100% python app')
+st.header('Typical Python App')
 
 DATE_COLUMN = 'order_date'
 DATA_URL = ('https://raw.githubusercontent.com/dbt-labs/jaffle_shop/main/seeds/raw_orders.csv')
@@ -22,7 +22,7 @@ def load_data(nrows, DATA_URL):
         lowercase = lambda x: str(x).lower()
         data.rename(lowercase, axis='columns', inplace=True)
         if DATE_COLUMN: 
-                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
+                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN], format='%Y-%m-%d')
         return data
     except:
         raise ValueError('Failed to load URL')
@@ -33,17 +33,21 @@ data = load_data(100, DATA_URL)
 st.write('Data updated', datetime.now())
 
 orders_by_latest_status = data.iloc[data.groupby(['id','user_id'])['order_date'].idxmax()]
-        
+     
 b = (
    alt.Chart(orders_by_latest_status)
    .mark_bar()
-   .encode(y="yearmonth(order_date):O", x="distinct(user_id):Q" , color="status:N")
+   .encode(
+            alt.Y('order_date', type='temporal', timeUnit='yearmonth', title='Order Month'),
+            alt.X('user_id', type='quantitative', aggregate='distinct', title='Customers'),
+            alt.Color('status', type='nominal', title='Latest Order Status')
+        )
 )
 
 st.altair_chart(b)
 
 python_version = '''
-
+           
                 DATE_COLUMN = 'order_date'
                 DATA_URL = ('https://raw.githubusercontent.com/dbt-labs/jaffle_shop/main/seeds/raw_orders.csv')
 
@@ -53,7 +57,7 @@ python_version = '''
                         lowercase = lambda x: str(x).lower()
                         data.rename(lowercase, axis='columns', inplace=True)
                         if DATE_COLUMN: 
-                                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
+                                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN], format='%Y-%m-%d')
                         return data
                     except:
                         raise ValueError('Failed to load URL')
@@ -64,20 +68,25 @@ python_version = '''
                 st.write('Data updated', datetime.now())
 
                 orders_by_latest_status = data.iloc[data.groupby(['id','user_id'])['order_date'].idxmax()]
-                        
+                    
                 b = (
                 alt.Chart(orders_by_latest_status)
                 .mark_bar()
-                .encode(y="yearmonth(order_date):O", x="distinct(user_id):Q" , color="status:N")
+                .encode(
+                            alt.Y('order_date', type='temporal', timeUnit='yearmonth', title='Order Month'),
+                            alt.X('user_id', type='quantitative', aggregate='distinct', title='Customers'),
+                            alt.Color('status', type='nominal', title='Latest Order Status')
+                        )
                 )
 
                 st.altair_chart(b)
 
                 '''
 
-st.code(python_version, language='python')
+with st.expander("See Python code"):
+    st.code(python_version, language='python')
 
-st.header('What it looks like to use SQL directly instead')
+st.header('A more flexible SQL deployment')
 
 ## OR do this with a database directly 
 
@@ -100,7 +109,7 @@ df = conn.query('''
                 )
 
                 SELECT
-                    DATE_TRUNC('month', LATEST_ORDER_DATE) as month, 
+                    DATE_TRUNC('month', LATEST_ORDER_DATE)::date as month, 
                     latest_order_status, 
                     count(distinct order_id) as orders,
                     count(distinct customer_id) as customers
@@ -114,7 +123,11 @@ df = conn.query('''
 c = (
    alt.Chart(df)
    .mark_bar()
-   .encode(y="yearmonth(month):O", x="customers:Q" , color="latest_order_status:N")
+   .encode(
+            alt.Y('month', type='temporal', timeUnit='yearmonth', title='Order Month'),
+            alt.X('customers', type='quantitative', title='Customers'),
+            alt.Color('latest_order_status', type='nominal', title='Latest Order Status')
+        )
 )
 
 st.altair_chart(c)
@@ -142,7 +155,7 @@ sql_version = '''
                             )
 
                             SELECT
-                                DATE_TRUNC('month', LATEST_ORDER_DATE) as month, 
+                                DATE_TRUNC('month', LATEST_ORDER_DATE)::date as month, 
                                 latest_order_status, 
                                 count(distinct order_id) as orders,
                                 count(distinct customer_id) as customers
@@ -156,10 +169,15 @@ sql_version = '''
             c = (
             alt.Chart(df)
             .mark_bar()
-            .encode(y="yearmonth(month):O", x="customers:Q" , color="latest_order_status:N")
+            .encode(
+                        alt.Y('month', type='temporal', timeUnit='yearmonth', title='Order Month'),
+                        alt.X('customers', type='quantitative', title='Customers'),
+                        alt.Color('latest_order_status', type='nominal', title='Latest Order Status')
+                    )
             )
 
             st.altair_chart(c)
         '''
 
-st.code(sql_version, language='python')
+with st.expander("See Python + SQL code"):
+    st.code(sql_version, language='python')
