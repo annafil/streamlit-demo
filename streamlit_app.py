@@ -22,7 +22,7 @@ def load_data(nrows, DATA_URL):
         lowercase = lambda x: str(x).lower()
         data.rename(lowercase, axis='columns', inplace=True)
         if DATE_COLUMN: 
-                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN], format='%Y-%m-%d')
+                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
         return data
     except:
         raise ValueError('Failed to load URL')
@@ -33,12 +33,12 @@ data = load_data(100, DATA_URL)
 st.write('Data updated', datetime.now())
 
 orders_by_latest_status = data.iloc[data.groupby(['id','user_id'])['order_date'].idxmax()]
-     
+orders_by_latest_status['pretty_date'] = orders_by_latest_status['order_date'].dt.strftime('%Y-%m')
 b = (
    alt.Chart(orders_by_latest_status)
    .mark_bar()
    .encode(
-            alt.Y('order_date', type='temporal', timeUnit='yearmonth', title='Order Month'),
+            alt.Y('pretty_date', type='ordinal', title='Order Month'),
             alt.X('user_id', type='quantitative', aggregate='distinct', title='Customers'),
             alt.Color('status', type='nominal', title='Latest Order Status')
         )
@@ -57,7 +57,7 @@ python_version = '''
                         lowercase = lambda x: str(x).lower()
                         data.rename(lowercase, axis='columns', inplace=True)
                         if DATE_COLUMN: 
-                                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN], format='%Y-%m-%d')
+                                data[DATE_COLUMN] = pd.to_datetime(data[DATE_COLUMN])
                         return data
                     except:
                         raise ValueError('Failed to load URL')
@@ -68,12 +68,12 @@ python_version = '''
                 st.write('Data updated', datetime.now())
 
                 orders_by_latest_status = data.iloc[data.groupby(['id','user_id'])['order_date'].idxmax()]
-                    
+                orders_by_latest_status['pretty_date'] = orders_by_latest_status['order_date'].dt.strftime('%Y-%m')
                 b = (
                 alt.Chart(orders_by_latest_status)
                 .mark_bar()
                 .encode(
-                            alt.Y('order_date', type='temporal', timeUnit='yearmonth', title='Order Month'),
+                            alt.Y('pretty_date', type='ordinal', title='Order Month'),
                             alt.X('user_id', type='quantitative', aggregate='distinct', title='Customers'),
                             alt.Color('status', type='nominal', title='Latest Order Status')
                         )
@@ -109,7 +109,7 @@ df = conn.query('''
                 )
 
                 SELECT
-                    DATE_TRUNC('month', LATEST_ORDER_DATE)::date as month, 
+                    TO_CHAR(DATE_TRUNC('month', LATEST_ORDER_DATE), 'YYYY-MM') as month, 
                     latest_order_status, 
                     count(distinct order_id) as orders,
                     count(distinct customer_id) as customers
@@ -124,7 +124,7 @@ c = (
    alt.Chart(df)
    .mark_bar()
    .encode(
-            alt.Y('month', type='temporal', timeUnit='yearmonth', title='Order Month'),
+            alt.Y('month', type='ordinal', title='Order Month'),
             alt.X('customers', type='quantitative', title='Customers'),
             alt.Color('latest_order_status', type='nominal', title='Latest Order Status')
         )
@@ -155,7 +155,7 @@ sql_version = '''
                             )
 
                             SELECT
-                                DATE_TRUNC('month', LATEST_ORDER_DATE)::date as month, 
+                                DATE_TRUNC('month', LATEST_ORDER_DATE) as month, 
                                 latest_order_status, 
                                 count(distinct order_id) as orders,
                                 count(distinct customer_id) as customers
